@@ -556,11 +556,17 @@ function buildPuzzle() {
   const title   = document.getElementById('puzzleTitle').value.trim();
   const notes   = document.getElementById('notes').value.trim();
 
+  // Convert {row,col} -> [row,col] and [{a,b}] -> [[[r,c],[r,c]]] to match server format
+  const startArr = startPos ? [startPos.row, startPos.col] : null;
+  const goalArr  = goalPos  ? [goalPos.row,  goalPos.col]  : null;
+  const warpsArr = warpPairs.map(p => [[p.a.row, p.a.col], [p.b.row, p.b.col]]);
+
   const puzzle = {
     grid,
-    startPos,
-    goalPos,
-    warpPairs,
+    startPos: startArr,
+    goalPos:  goalArr,
+    warpPairs: warpsArr,
+    size: Math.max(W, H),
     difficulty: difficulty || undefined,
     creatorName: creator || undefined,
     title: title || undefined,
