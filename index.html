@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pathfinder Puzzle Builder</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --surface3: #30363d;
+    --border: #30363d; --border2: #444c56; --text: #e6edf3; --muted: #8b949e;
+    --accent: #e94560; --accent2: #c73652;
+    --green: #238636; --green2: #2ea043;
+    --blue: #1f6feb; --blue2: #388bfd;
+    --amber: #d29922; --amber-bg: #3d2d00;
+    --red: #da3633; --red2: #f85149;
+    --purple: #6e40c9; --purple2: #a371f7;
+    --cyan: #1b7c83; --cyan2: #39d353;
+    --radius: 10px; --radius-sm: 6px;
+  }
+
+  body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; }
+
+  /* ── Header ── */
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 1.5rem; display: flex; align-items: center; gap: 1rem; }
+  header h1 { font-size: 1.2rem; color: var(--accent); flex: 1; }
+  header p { font-size: .85rem; color: var(--muted); }
+
+  /* ── Layout ── */
+  .layout { display: grid; grid-template-columns: 220px 1fr 260px; gap: 0; min-height: calc(100vh - 65px); }
+
+  /* ── Side panels ── */
+  .panel { background: var(--surface); border-right: 1px solid var(--border); padding: 1rem; }
+  .panel.right { border-right: none; border-left: 1px solid var(--border); }
+  .panel h2 { font-size: .8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .8rem; }
+
+  /* ── Palette ── */
+  .palette-tile {
+    display: flex; align-items: center; gap: .6rem; padding: .55rem .7rem;
+    border-radius: var(--radius-sm); border: 2px solid transparent;
+    cursor: pointer; font-size: .85rem; margin-bottom: .35rem; transition: all .1s;
+    background: var(--surface2);
+  }
+  .palette-tile:hover { border-color: var(--border2); background: var(--surface3); }
+  .palette-tile.selected { border-color: var(--accent); background: #3d0e1c; }
+  .tile-icon { font-size: 1.2rem; width: 1.5rem; text-align: center; flex-shrink: 0; }
+  .tile-name { flex: 1; }
+  .tile-key { font-size: .7rem; color: var(--muted); background: var(--surface3); padding: .1rem .3rem; border-radius: 3px; font-family: monospace; }
+
+  /* ── Main canvas area ── */
+  .canvas-area { padding: 1.5rem; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+
+  .toolbar { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; width: 100%; }
+  .toolbar label { font-size: .82rem; color: var(--muted); }
+  .toolbar input[type=number] { width: 60px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .35rem .5rem; color: var(--text); font-size: .85rem; }
+  .toolbar input[type=number]:focus { outline: 2px solid var(--blue); border-color: transparent; }
+
+  /* ── Grid ── */
+  #gridWrap { display: inline-block; }
+  .grid-row { display: flex; }
+  .cell {
+    width: 2.6rem; height: 2.6rem; display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; cursor: pointer; border: 1px solid #1e242c; border-radius: 4px;
+    transition: transform .08s, border-color .1s; user-select: none; position: relative;
+  }
+  .cell:hover { border-color: var(--border2); transform: scale(1.05); z-index: 2; }
+  .cell.start-cell { box-shadow: 0 0 0 2px var(--green); }
+  .cell.goal-cell { box-shadow: 0 0 0 2px var(--amber); }
+
+  /* ── Mode tip ── */
+  .mode-tip {
+    font-size: .82rem; padding: .45rem .9rem; border-radius: 20px;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+  }
+  .mode-tip strong { color: var(--text); }
+
+  /* ── Buttons ── */
+  .btn { padding: .45rem .9rem; border-radius: var(--radius-sm); border: none; cursor: pointer; font-size: .82rem; font-weight: 600; transition: all .1s; }
+  .btn:active { transform: scale(.97); }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-accent:hover { background: var(--accent2); }
+  .btn-green { background: var(--green); color: #fff; }
+  .btn-green:hover { background: var(--green2); }
+  .btn-blue { background: var(--blue); color: #fff; }
+  .btn-blue:hover { background: var(--blue2); }
+  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--surface3); }
+  .btn-red { background: var(--red); color: #fff; }
+  .btn-red:hover { background: var(--red2); }
+
+  /* ── Right panel fields ── */
+  .field { margin-bottom: .9rem; }
+  .field label { display: block; font-size: .78rem; color: var(--muted); margin-bottom: .35rem; }
+  .field input, .field select, .field textarea {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: .45rem .6rem; color: var(--text); font-size: .85rem;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: 2px solid var(--blue); border-color: transparent; }
+  .field textarea { font-family: inherit; resize: vertical; min-height: 70px; }
+
+  /* ── Difficulty stars ── */
+  .stars { display: flex; gap: .3rem; margin-top: .35rem; }
+  .star-btn { font-size: 1.2rem; cursor: pointer; opacity: .3; transition: opacity .1s; background: none; border: none; padding: 0; }
+  .star-btn.on { opacity: 1; }
+
+  /* ── Output box ── */
+  .json-out { background: #0d1117; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .7rem; font-family: monospace; font-size: .7rem; color: #79c0ff; max-height: 180px; overflow: auto; white-space: pre-wrap; margin-top: .5rem; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 999;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: .7rem 1.2rem; font-size: .85rem; max-width: 340px;
+    transform: translateY(100px); opacity: 0; transition: all .3s;
+    display: flex; align-items: center; gap: .6rem;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.ok { border-color: var(--green); color: #3fb950; }
+  #toast.err { border-color: var(--red); color: #f85149; }
+
+  /* ── Divider ── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: .8rem 0; }
+
+  /* ── Help badge ── */
+  .badge { display: inline-block; font-size: .7rem; background: var(--surface3); color: var(--muted); border-radius: 10px; padding: .1rem .4rem; margin-left: .3rem; }
+
+  /* ── Step indicator ── */
+  .steps { display: flex; gap: .4rem; align-items: center; margin-bottom: .5rem; }
+  .step { display: flex; align-items: center; gap: .4rem; font-size: .8rem; color: var(--muted); }
+  .step-dot { width: 1.3rem; height: 1.3rem; border-radius: 50%; background: var(--surface3); display: flex; align-items: center; justify-content: center; font-size: .65rem; font-weight: 700; }
+  .step.done .step-dot { background: var(--green); color: #fff; }
+  .step.active .step-dot { background: var(--accent); color: #fff; }
+  .step-line { flex: 1; height: 1px; background: var(--border); }
+
+  /* ── Warp pair badges ── */
+  .warp-list { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .35rem; }
+  .warp-badge { font-size: .72rem; background: var(--purple); color: #fff; border-radius: 4px; padding: .15rem .5rem; }
+
+  select option { background: var(--surface2); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>⭐ Pathfinder Puzzle Builder</h1>
+  </div>
+  <p>Build your puzzle, then export it as JSON to send in!</p>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT: Tile palette -->
+  <div class="panel" id="palettePanel">
+    <h2>Tile Palette</h2>
+    <div id="palette"></div>
+    <hr class="divider">
+    <h2>Warp Pairs <span class="badge">click pairs</span></h2>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem">Select Warp tile mode, then click two cells to link them as a pair.</p>
+    <div class="warp-list" id="warpList"><span style="font-size:.75rem;color:var(--muted)">None yet</span></div>
+    <button class="btn btn-ghost" style="margin-top:.6rem;font-size:.75rem" onclick="clearWarps()">Clear all warps</button>
+  </div>
+
+  <!-- CENTER: Grid -->
+  <div class="canvas-area">
+
+    <div class="steps" id="stepBar">
+      <div class="step" id="s1"><div class="step-dot" id="sd1">1</div><span>Paint grid</span></div>
+      <div class="step-line"></div>
+      <div class="step" id="s2"><div class="step-dot" id="sd2">2</div><span>Place start</span></div>
+      <div class="step-line"></div>
+      <div class="step" id="s3"><div class="step-dot" id="sd3">3</div><span>Place goal</span></div>
+      <div class="step-line"></div>
+      <div class="step" id="s4"><div class="step-dot" id="sd4">4</div><span>Export!</span></div>
+    </div>
+
+    <div class="toolbar">
+      <label>Grid size:</label>
+      <input type="number" id="gridW" value="8" min="4" max="14" title="Width">
+      <span style="color:var(--muted);font-size:.85rem">×</span>
+      <input type="number" id="gridH" value="8" min="4" max="14" title="Height">
+      <button class="btn btn-ghost" onclick="resizeGrid()">Resize</button>
+      <button class="btn btn-ghost" onclick="clearGrid()">Clear grid</button>
+      <button class="btn btn-ghost" onclick="fillWalls()">Fill walls</button>
+    </div>
+
+    <div id="modeTip" class="mode-tip"><strong>Mode:</strong> Paint empty</div>
+
+    <div id="gridWrap"></div>
+
+    <div class="toolbar" style="justify-content:center;gap:.7rem;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="undo()">↩ Undo</button>
+      <button class="btn btn-green" onclick="generateJSON()">🔍 Preview JSON</button>
+      <button class="btn btn-accent" onclick="exportJSON()">⬇️ Download JSON</button>
+      <button class="btn btn-blue" onclick="copyJSON()">📋 Copy JSON</button>
+    </div>
+
+    <div id="jsonPreview" style="display:none;width:100%">
+      <div class="json-out" id="jsonOut"></div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Puzzle info -->
+  <div class="panel right">
+    <h2>Puzzle Info</h2>
+
+    <div class="field">
+      <label>Your name / handle</label>
+      <input type="text" id="creatorName" placeholder="e.g. CoolPuzzleMaker99">
+    </div>
+
+    <div class="field">
+      <label>Puzzle title <span class="badge">optional</span></label>
+      <input type="text" id="puzzleTitle" placeholder="e.g. The Twisty Maze">
+    </div>
+
+    <div class="field">
+      <label>Difficulty <span class="badge">your estimate</span></label>
+      <div class="stars" id="stars">
+        <button class="star-btn" data-v="1" onclick="setDiff(1)">⭐</button>
+        <button class="star-btn" data-v="2" onclick="setDiff(2)">⭐</button>
+        <button class="star-btn" data-v="3" onclick="setDiff(3)">⭐</button>
+        <button class="star-btn" data-v="4" onclick="setDiff(4)">⭐</button>
+        <button class="star-btn" data-v="5" onclick="setDiff(5)">⭐</button>
+      </div>
+      <p style="font-size:.75rem;color:var(--muted);margin-top:.4rem">1 = super easy · 5 = devious</p>
+    </div>
+
+    <div class="field">
+      <label>Notes for the admin <span class="badge">optional</span></label>
+      <textarea id="notes" placeholder="Tell us anything! Inspiration, intended solve path, anything weird about the layout..."></textarea>
+    </div>
+
+    <hr class="divider">
+    <h2>Grid info</h2>
+
+    <div style="font-size:.82rem;color:var(--muted);line-height:1.8">
+      <div>Size: <strong id="infoSize">8 × 8</strong></div>
+      <div>Start: <strong id="infoStart">Not placed</strong></div>
+      <div>Goal: <strong id="infoGoal">Not placed</strong></div>
+      <div>Warp pairs: <strong id="infoWarps">0</strong></div>
+    </div>
+
+    <hr class="divider">
+    <h2>Tips</h2>
+    <div style="font-size:.78rem;color:var(--muted);line-height:1.7">
+      <p>🟩 <strong style="color:var(--text)">Start</strong> — where the player begins</p>
+      <p>⭐ <strong style="color:var(--text)">Goal</strong> — what they're trying to reach</p>
+      <p>🟦 <strong style="color:var(--text)">Ice</strong> — player slides until hitting a wall</p>
+      <p>🔄 <strong style="color:var(--text)">Rotate R/L</strong> — rotates next input 90°</p>
+      <p>🟧 <strong style="color:var(--text)">One-use</strong> — disappears after stepping on it</p>
+      <p>🟪 <strong style="color:var(--text)">Warp</strong> — teleports to its paired tile</p>
+      <p>🟨 <strong style="color:var(--text)">Boost</strong> — moves two steps instead of one</p>
+      <p style="margin-top:.5rem">💡 Hotkeys: <strong style="color:var(--text)">E W S G I R L U T B</strong></p>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Tile definitions ──────────────────────────────────────────────────────────
+const TILES = {
+  empty:    { emoji: '⬜', name: 'Empty',      key: 'E' },
+  wall:     { emoji: '⬛', name: 'Wall',       key: 'W' },
+  start:    { emoji: '🟩', name: 'Start',      key: 'S' },
+  goal:     { emoji: '⭐', name: 'Goal',       key: 'G' },
+  ice:      { emoji: '🟦', name: 'Ice',        key: 'I' },
+  rotate_r: { emoji: '🔄', name: 'Rotate R',   key: 'R' },
+  rotate_l: { emoji: '🔁', name: 'Rotate L',   key: 'L' },
+  one_use:  { emoji: '🟧', name: 'One-use',    key: 'U' },
+  warp:     { emoji: '🟪', name: 'Warp',       key: 'T' },
+  boost:    { emoji: '🟨', name: 'Boost',      key: 'B' },
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let W = 8, H = 8;
+let grid = [];           // 2D array of tile keys
+let startPos = null;     // {row,col}
+let goalPos  = null;
+let selected = 'empty';
+let history  = [];       // undo stack
+let warpPending = null;  // first warp cell waiting for its pair
+let warpPairs  = [];     // [{a:{row,col}, b:{row,col}}]
+let difficulty = 0;
+let isMouseDown = false;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+buildPalette();
+initGrid();
+renderGrid();
+updateInfo();
+
+function initGrid() {
+  grid = Array.from({length: H}, () => Array(W).fill('empty'));
+  startPos = null; goalPos = null; warpPairs = []; warpPending = null;
+}
+
+// ── Palette ───────────────────────────────────────────────────────────────────
+function buildPalette() {
+  const el = document.getElementById('palette');
+  el.innerHTML = '';
+  for (const [key, t] of Object.entries(TILES)) {
+    const d = document.createElement('div');
+    d.className = 'palette-tile' + (key === selected ? ' selected' : '');
+    d.id = 'pal-' + key;
+    d.innerHTML = `<span class="tile-icon">${t.emoji}</span><span class="tile-name">${t.name}</span><span class="tile-key">${t.key}</span>`;
+    d.onclick = () => selectTile(key);
+    el.appendChild(d);
+  }
+}
+
+function selectTile(key) {
+  selected = key;
+  document.querySelectorAll('.palette-tile').forEach(d => d.classList.remove('selected'));
+  document.getElementById('pal-' + key)?.classList.add('selected');
+  updateModeTip();
+}
+
+function updateModeTip() {
+  const t = TILES[selected];
+  let tip = `<strong>Mode:</strong> Paint ${t.name} <span style="font-size:1.1rem">${t.emoji}</span>`;
+  if (selected === 'warp') {
+    tip += warpPending ? ' — <span style="color:#a371f7">click the second warp cell</span>' : ' — click two cells to link them';
+  }
+  if (selected === 'start') tip += ' — click to place (only one allowed)';
+  if (selected === 'goal')  tip += ' — click to place (only one allowed)';
+  document.getElementById('modeTip').innerHTML = tip;
+}
+
+// ── Grid rendering ────────────────────────────────────────────────────────────
+function renderGrid() {
+  const wrap = document.getElementById('gridWrap');
+  wrap.innerHTML = '';
+
+  for (let r = 0; r < H; r++) {
+    const row = document.createElement('div');
+    row.className = 'grid-row';
+    for (let c = 0; c < W; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.r = r; cell.dataset.c = c;
+      cell.textContent = TILES[grid[r][c]]?.emoji ?? '⬜';
+      if (startPos && startPos.row === r && startPos.col === c) cell.classList.add('start-cell');
+      if (goalPos  && goalPos.row  === r && goalPos.col  === c) cell.classList.add('goal-cell');
+      // warp pending highlight
+      if (warpPending && warpPending.row === r && warpPending.col === c) {
+        cell.style.boxShadow = '0 0 0 2px #a371f7';
+      }
+      cell.addEventListener('mousedown', e => { isMouseDown = true; paintCell(r, c); e.preventDefault(); });
+      cell.addEventListener('mouseenter', () => { if (isMouseDown) paintCell(r, c); });
+      row.appendChild(cell);
+    }
+    wrap.appendChild(row);
+  }
+}
+
+document.addEventListener('mouseup', () => { isMouseDown = false; });
+
+// ── Paint cell ────────────────────────────────────────────────────────────────
+function paintCell(r, c) {
+  pushHistory();
+
+  if (selected === 'start') {
+    if (startPos) grid[startPos.row][startPos.col] = 'empty';
+    startPos = {row: r, col: c};
+    grid[r][c] = 'start';
+    renderGrid(); updateInfo(); updateSteps(); return;
+  }
+  if (selected === 'goal') {
+    if (goalPos) grid[goalPos.row][goalPos.col] = 'empty';
+    goalPos = {row: r, col: c};
+    grid[r][c] = 'goal';
+    renderGrid(); updateInfo(); updateSteps(); return;
+  }
+
+  // Warp pairing logic
+  if (selected === 'warp') {
+    if (warpPending) {
+      const a = warpPending, b = {row: r, col: c};
+      if (a.row === b.row && a.col === b.col) { warpPending = null; renderGrid(); return; }
+      // Remove any existing warp pair that contains these cells
+      warpPairs = warpPairs.filter(p => !(cellEq(p.a, a) || cellEq(p.b, a) || cellEq(p.a, b) || cellEq(p.b, b)));
+      warpPairs.push({a, b});
+      grid[a.row][a.col] = 'warp';
+      grid[b.row][b.col] = 'warp';
+      warpPending = null;
+      renderGrid(); renderWarpList(); updateInfo(); updateModeTip(); return;
+    } else {
+      grid[r][c] = 'warp';
+      warpPending = {row: r, col: c};
+      renderGrid(); updateModeTip(); return;
+    }
+  }
+
+  // Clear start/goal if painting over them
+  if (startPos && startPos.row === r && startPos.col === c) startPos = null;
+  if (goalPos  && goalPos.row  === r && goalPos.col  === c) goalPos  = null;
+  // Clear warp pair if painting over a warp cell
+  if (grid[r][c] === 'warp') {
+    warpPairs = warpPairs.filter(p => !(cellEq(p.a, {row:r,col:c}) || cellEq(p.b, {row:r,col:c})));
+    if (warpPending && cellEq(warpPending, {row:r,col:c})) warpPending = null;
+    renderWarpList();
+  }
+
+  grid[r][c] = selected;
+  syncSpecialPos();
+  renderGrid(); updateInfo(); updateSteps();
+}
+
+function syncSpecialPos() {
+  // Ensure startPos/goalPos track correctly if overwritten by non-start/goal tile
+}
+
+function cellEq(a, b) { return a && b && a.row === b.row && a.col === b.col; }
+
+// ── Warp list ─────────────────────────────────────────────────────────────────
+function renderWarpList() {
+  const el = document.getElementById('warpList');
+  if (!warpPairs.length) { el.innerHTML = '<span style="font-size:.75rem;color:var(--muted)">None yet</span>'; return; }
+  el.innerHTML = warpPairs.map((p, i) =>
+    `<span class="warp-badge" title="Pair ${i+1}: (${p.a.row},${p.a.col}) ↔ (${p.b.row},${p.b.col})">Pair ${i+1}</span>`
+  ).join('');
+}
+
+function clearWarps() {
+  warpPairs.forEach(p => {
+    grid[p.a.row][p.a.col] = 'empty';
+    grid[p.b.row][p.b.col] = 'empty';
+  });
+  warpPairs = []; warpPending = null;
+  renderGrid(); renderWarpList(); updateInfo();
+}
+
+// ── Undo ──────────────────────────────────────────────────────────────────────
+function pushHistory() {
+  history.push({
+    grid: grid.map(r => [...r]),
+    startPos: startPos ? {...startPos} : null,
+    goalPos:  goalPos  ? {...goalPos}  : null,
+    warpPairs: JSON.parse(JSON.stringify(warpPairs)),
+  });
+  if (history.length > 50) history.shift();
+}
+
+function undo() {
+  if (!history.length) { toast('Nothing to undo!', 'err'); return; }
+  const s = history.pop();
+  grid = s.grid; startPos = s.startPos; goalPos = s.goalPos; warpPairs = s.warpPairs;
+  warpPending = null;
+  renderGrid(); renderWarpList(); updateInfo(); updateSteps();
+  toast('Undone!', 'ok');
+}
+
+// ── Grid ops ──────────────────────────────────────────────────────────────────
+function resizeGrid() {
+  const nw = parseInt(document.getElementById('gridW').value);
+  const nh = parseInt(document.getElementById('gridH').value);
+  if (nw < 4 || nw > 14 || nh < 4 || nh > 14) { toast('Size must be between 4 and 14', 'err'); return; }
+  pushHistory();
+  const ng = Array.from({length: nh}, (_, r) => Array.from({length: nw}, (_, c) => (r < H && c < W) ? grid[r][c] : 'empty'));
+  W = nw; H = nh; grid = ng;
+  if (startPos && (startPos.row >= H || startPos.col >= W)) startPos = null;
+  if (goalPos  && (goalPos.row  >= H || goalPos.col  >= W)) goalPos  = null;
+  warpPairs = warpPairs.filter(p => p.a.row < H && p.a.col < W && p.b.row < H && p.b.col < W);
+  document.getElementById('infoSize').textContent = `${W} × ${H}`;
+  renderGrid(); renderWarpList(); updateInfo(); updateSteps();
+}
+
+function clearGrid() {
+  if (!confirm('Clear the whole grid?')) return;
+  pushHistory();
+  grid = Array.from({length: H}, () => Array(W).fill('empty'));
+  startPos = null; goalPos = null; warpPairs = []; warpPending = null;
+  renderGrid(); renderWarpList(); updateInfo(); updateSteps();
+  toast('Grid cleared', 'ok');
+}
+
+function fillWalls() {
+  pushHistory();
+  for (let r = 0; r < H; r++)
+    for (let c = 0; c < W; c++)
+      if (grid[r][c] === 'empty') grid[r][c] = 'wall';
+  renderGrid(); updateInfo();
+  toast('Empty cells → walls', 'ok');
+}
+
+// ── Difficulty ────────────────────────────────────────────────────────────────
+function setDiff(v) {
+  difficulty = v;
+  document.querySelectorAll('.star-btn').forEach(b => b.classList.toggle('on', +b.dataset.v <= v));
+}
+
+// ── Info panel ────────────────────────────────────────────────────────────────
+function updateInfo() {
+  document.getElementById('infoSize').textContent  = `${W} × ${H}`;
+  document.getElementById('infoStart').textContent = startPos ? `row ${startPos.row}, col ${startPos.col}` : 'Not placed';
+  document.getElementById('infoGoal').textContent  = goalPos  ? `row ${goalPos.row}, col ${goalPos.col}`   : 'Not placed';
+  document.getElementById('infoWarps').textContent = warpPairs.length;
+}
+
+// ── Steps ─────────────────────────────────────────────────────────────────────
+function updateSteps() {
+  const hasNonEmpty = grid.some(r => r.some(c => c !== 'empty'));
+  const s1 = hasNonEmpty, s2 = !!startPos, s3 = !!goalPos;
+  setStep(1, s1 ? 'done' : 'active');
+  setStep(2, s2 ? 'done' : s1 ? 'active' : '');
+  setStep(3, s3 ? 'done' : s2 ? 'active' : '');
+  setStep(4, s3 ? 'active' : '');
+}
+
+function setStep(n, state) {
+  const el = document.getElementById('s' + n);
+  const dot = document.getElementById('sd' + n);
+  el.className = 'step' + (state ? ' ' + state : '');
+  dot.textContent = state === 'done' ? '✓' : n;
+}
+
+updateSteps();
+
+// ── JSON generation ───────────────────────────────────────────────────────────
+function buildPuzzle() {
+  const creator = document.getElementById('creatorName').value.trim();
+  const title   = document.getElementById('puzzleTitle').value.trim();
+  const notes   = document.getElementById('notes').value.trim();
+
+  const puzzle = {
+    grid,
+    startPos,
+    goalPos,
+    warpPairs,
+    difficulty: difficulty || undefined,
+    creatorName: creator || undefined,
+    title: title || undefined,
+    notes: notes || undefined,
+    builtWith: 'Pathfinder Puzzle Builder',
+    createdAt: new Date().toISOString(),
+  };
+  // Clean up undefined keys
+  return JSON.parse(JSON.stringify(puzzle));
+}
+
+function validate() {
+  if (!startPos) { toast('Please place a Start tile first (🟩)', 'err'); return false; }
+  if (!goalPos)  { toast('Please place a Goal tile first (⭐)', 'err');  return false; }
+  // Check warp pairs are complete
+  const warpCells = [];
+  for (let r = 0; r < H; r++)
+    for (let c = 0; c < W; c++)
+      if (grid[r][c] === 'warp') warpCells.push({row:r,col:c});
+  const paired = warpPairs.flatMap(p => [p.a, p.b]);
+  const unpaired = warpCells.filter(w => !paired.some(p => cellEq(p, w)));
+  if (unpaired.length) { toast(`${unpaired.length} warp tile(s) are unpaired! Link them or remove them.`, 'err'); return false; }
+  return true;
+}
+
+function generateJSON() {
+  if (!validate()) return;
+  const json = JSON.stringify(buildPuzzle(), null, 2);
+  document.getElementById('jsonPreview').style.display = 'block';
+  document.getElementById('jsonOut').textContent = json;
+  document.getElementById('jsonOut').scrollTop = 0;
+}
+
+function exportJSON() {
+  if (!validate()) return;
+  const puzzle = buildPuzzle();
+  const title  = puzzle.title ? puzzle.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'puzzle';
+  const blob   = new Blob([JSON.stringify({dateStr: '', puzzle}, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `pathfinder_puzzle_${title}.json`;
+  a.click();
+  toast('Puzzle downloaded! Send that file to the admin 🎉', 'ok');
+}
+
+function copyJSON() {
+  if (!validate()) return;
+  const json = JSON.stringify({dateStr: '', puzzle: buildPuzzle()}, null, 2);
+  navigator.clipboard.writeText(json).then(() => toast('JSON copied to clipboard!', 'ok')).catch(() => toast('Copy failed — try the Download button', 'err'));
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = (type === 'ok' ? '✓ ' : '⚠ ') + msg;
+  el.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+  const map = { E:'empty', W:'wall', S:'start', G:'goal', I:'ice', R:'rotate_r', L:'rotate_l', U:'one_use', T:'warp', B:'boost' };
+  const key = e.key.toUpperCase();
+  if (map[key]) { selectTile(map[key]); e.preventDefault(); }
+  if (e.ctrlKey && key === 'Z') { undo(); e.preventDefault(); }
+});
+</script>
+</body>
+</html>
