@@ -4,149 +4,406 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pathfinder Puzzle Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --surface3: #30363d;
-    --border: #30363d; --border2: #444c56; --text: #e6edf3; --muted: #8b949e;
-    --accent: #e94560; --accent2: #c73652;
-    --green: #238636; --green2: #2ea043;
-    --blue: #1f6feb; --blue2: #388bfd;
-    --amber: #d29922; --amber-bg: #3d2d00;
-    --red: #da3633; --red2: #f85149;
-    --purple: #6e40c9; --purple2: #a371f7;
-    --cyan: #1b7c83; --cyan2: #39d353;
-    --radius: 10px; --radius-sm: 6px;
+    /* Smart-home light palette */
+    --bg:        #f4f4f6;
+    --surface:   #ffffff;
+    --surface2:  #f4f4f6;
+    --surface3:  #ebebef;
+    --border:    #e4e4ea;
+    --border2:   #d1d1db;
+    --text:      #111118;
+    --muted:     #6e6e85;
+
+    /* Brand — purple from smart-home */
+    --brand:        #7c3aed;
+    --brand-mid:    #6d28d9;
+    --brand-light:  #ede9fe;
+    --brand-text:   #5b21b6;
+
+    /* Semantic */
+    --green:    #16a34a;
+    --green-bg: #dcfce7;
+    --green2:   #15803d;
+    --blue:     #2563eb;
+    --blue-bg:  #dbeafe;
+    --blue2:    #1d4ed8;
+    --amber:    #d97706;
+    --amber-bg: #fef3c7;
+    --red:      #dc2626;
+    --red-bg:   #fee2e2;
+    --red2:     #b91c1c;
+    --purple:   #7c3aed;
+    --purple-bg:#ede9fe;
+
+    --radius:    1rem;
+    --radius-sm: 0.625rem;
+    --radius-lg: 1.25rem;
   }
 
-  body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; }
+  .dark {
+    --bg:        #0f0f13;
+    --surface:   #1a1a24;
+    --surface2:  #22222f;
+    --surface3:  #2c2c3d;
+    --border:    #2e2e40;
+    --border2:   #3d3d54;
+    --text:      #f0f0f8;
+    --muted:     #8b8ba8;
+    --brand-light:  #2d1f5e;
+    --brand-text:   #c4b5fd;
+    --purple-bg: #2d1f5e;
+    --green-bg:  #052e1a;
+    --blue-bg:   #0d1f3c;
+    --red-bg:    #2c0f0f;
+    --amber-bg:  #2c1a00;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    min-height: 100vh;
+  }
 
   /* ── Header ── */
-  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 1.5rem; display: flex; align-items: center; gap: 1rem; }
-  header h1 { font-size: 1.2rem; color: var(--accent); flex: 1; }
-  header p { font-size: .85rem; color: var(--muted); }
+  header {
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-mid) 100%);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .header-logo {
+    width: 2.4rem; height: 2.4rem;
+    border-radius: 0.75rem;
+    background: rgba(255,255,255,0.2);
+    display: grid; place-items: center;
+    font-weight: 700; font-size: .95rem;
+    color: #fff; flex-shrink: 0;
+    letter-spacing: -.5px;
+  }
+  header h1 { font-size: 1.05rem; font-weight: 600; color: #fff; flex: 1; }
+  header p  { font-size: .82rem; color: rgba(255,255,255,0.75); }
 
   /* ── Layout ── */
-  .layout { display: grid; grid-template-columns: 220px 1fr 260px; gap: 0; min-height: calc(100vh - 65px); }
+  .layout {
+    display: grid;
+    grid-template-columns: 220px 1fr 260px;
+    gap: 0;
+    min-height: calc(100vh - 60px);
+  }
 
   /* ── Side panels ── */
-  .panel { background: var(--surface); border-right: 1px solid var(--border); padding: 1rem; }
-  .panel.right { border-right: none; border-left: 1px solid var(--border); }
-  .panel h2 { font-size: .8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .8rem; }
+  .panel {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 1.2rem 1rem;
+  }
+  .panel.right {
+    border-right: none;
+    border-left: 1px solid var(--border);
+  }
+  .panel h2 {
+    font-size: .7rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: .85rem;
+  }
 
   /* ── Palette ── */
   .palette-tile {
-    display: flex; align-items: center; gap: .6rem; padding: .55rem .7rem;
-    border-radius: var(--radius-sm); border: 2px solid transparent;
-    cursor: pointer; font-size: .85rem; margin-bottom: .35rem; transition: all .1s;
+    display: flex; align-items: center; gap: .55rem;
+    padding: .5rem .65rem;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid transparent;
+    cursor: pointer; font-size: .83rem;
+    margin-bottom: .3rem; transition: all .12s;
     background: var(--surface2);
+    color: var(--text); font-weight: 500;
   }
   .palette-tile:hover { border-color: var(--border2); background: var(--surface3); }
-  .palette-tile.selected { border-color: var(--accent); background: #3d0e1c; }
-  .tile-icon { font-size: 1.2rem; width: 1.5rem; text-align: center; flex-shrink: 0; }
+  .palette-tile.selected {
+    border-color: var(--brand);
+    background: var(--brand-light);
+    color: var(--brand-text);
+  }
+  .tile-icon { font-size: 1.1rem; width: 1.4rem; text-align: center; flex-shrink: 0; }
   .tile-name { flex: 1; }
-  .tile-key { font-size: .7rem; color: var(--muted); background: var(--surface3); padding: .1rem .3rem; border-radius: 3px; font-family: monospace; }
+  .tile-key {
+    font-size: .68rem; color: var(--muted);
+    background: var(--surface3); padding: .1rem .3rem;
+    border-radius: 4px; font-family: 'DM Mono', monospace;
+    font-weight: 500;
+  }
+  .palette-tile.selected .tile-key {
+    background: rgba(124,58,237,.15);
+    color: var(--brand-text);
+  }
 
   /* ── Main canvas area ── */
-  .canvas-area { padding: 1.5rem; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+  .canvas-area {
+    padding: 1.5rem;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 1rem;
+    background: var(--bg);
+  }
 
-  .toolbar { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; width: 100%; }
-  .toolbar label { font-size: .82rem; color: var(--muted); }
-  .toolbar input[type=number] { width: 60px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .35rem .5rem; color: var(--text); font-size: .85rem; }
-  .toolbar input[type=number]:focus { outline: 2px solid var(--blue); border-color: transparent; }
+  .toolbar {
+    display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; width: 100%;
+  }
+  .toolbar label { font-size: .82rem; color: var(--muted); font-weight: 500; }
+  .toolbar input[type=number] {
+    width: 58px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: .38rem .5rem;
+    color: var(--text); font-size: .85rem;
+    font-family: inherit;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  }
+  .toolbar input[type=number]:focus {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(124,58,237,.12);
+  }
 
   /* ── Grid ── */
-  #gridWrap { display: inline-block; }
+  #gridWrap {
+    display: inline-block;
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: .85rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 0 0 1px var(--border);
+  }
   .grid-row { display: flex; }
   .cell {
-    width: 2.6rem; height: 2.6rem; display: flex; align-items: center; justify-content: center;
-    font-size: 1.4rem; cursor: pointer; border: 1px solid #1e242c; border-radius: 4px;
-    transition: transform .08s, border-color .1s; user-select: none; position: relative;
+    width: 2.5rem; height: 2.5rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; cursor: pointer;
+    border: 1px solid var(--border);
+    border-radius: .45rem;
+    transition: transform .08s, border-color .1s, box-shadow .1s;
+    user-select: none; position: relative;
+    background: var(--surface2);
   }
-  .cell:hover { border-color: var(--border2); transform: scale(1.05); z-index: 2; }
-  .cell.start-cell { box-shadow: 0 0 0 2px var(--green); }
-  .cell.goal-cell { box-shadow: 0 0 0 2px var(--amber); }
+  .cell:hover { border-color: var(--brand); transform: scale(1.07); z-index: 2; box-shadow: 0 0 0 2px rgba(124,58,237,.15); }
+  .cell.start-cell { box-shadow: 0 0 0 2px var(--green); border-color: var(--green); }
+  .cell.goal-cell  { box-shadow: 0 0 0 2px var(--amber); border-color: var(--amber); }
 
   /* ── Mode tip ── */
   .mode-tip {
-    font-size: .82rem; padding: .45rem .9rem; border-radius: 20px;
-    background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+    font-size: .81rem; padding: .45rem 1rem;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
   }
   .mode-tip strong { color: var(--text); }
 
   /* ── Buttons ── */
-  .btn { padding: .45rem .9rem; border-radius: var(--radius-sm); border: none; cursor: pointer; font-size: .82rem; font-weight: 600; transition: all .1s; }
+  .btn {
+    padding: .45rem .95rem;
+    border-radius: var(--radius-sm);
+    border: none; cursor: pointer;
+    font-size: .82rem; font-weight: 600;
+    transition: all .12s;
+    font-family: inherit;
+  }
   .btn:active { transform: scale(.97); }
-  .btn-accent { background: var(--accent); color: #fff; }
-  .btn-accent:hover { background: var(--accent2); }
-  .btn-green { background: var(--green); color: #fff; }
-  .btn-green:hover { background: var(--green2); }
-  .btn-blue { background: var(--blue); color: #fff; }
-  .btn-blue:hover { background: var(--blue2); }
-  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
-  .btn-ghost:hover { background: var(--surface3); }
-  .btn-red { background: var(--red); color: #fff; }
-  .btn-red:hover { background: var(--red2); }
+
+  .btn-accent  { background: var(--brand); color: #fff; }
+  .btn-accent:hover  { background: var(--brand-mid); }
+
+  .btn-green   { background: var(--green); color: #fff; }
+  .btn-green:hover  { background: var(--green2); }
+
+  .btn-blue    { background: var(--blue); color: #fff; }
+  .btn-blue:hover   { background: var(--blue2); }
+
+  .btn-ghost {
+    background: var(--surface);
+    color: var(--text);
+    border: 1.5px solid var(--border);
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  }
+  .btn-ghost:hover { background: var(--surface2); border-color: var(--border2); }
+
+  .btn-red     { background: var(--red); color: #fff; }
+  .btn-red:hover    { background: var(--red2); }
 
   /* ── Right panel fields ── */
-  .field { margin-bottom: .9rem; }
-  .field label { display: block; font-size: .78rem; color: var(--muted); margin-bottom: .35rem; }
-  .field input, .field select, .field textarea {
-    width: 100%; background: var(--surface2); border: 1px solid var(--border);
-    border-radius: var(--radius-sm); padding: .45rem .6rem; color: var(--text); font-size: .85rem;
+  .field { margin-bottom: .95rem; }
+  .field label {
+    display: block; font-size: .78rem;
+    color: var(--muted); margin-bottom: .35rem;
+    font-weight: 600; letter-spacing: .01em;
   }
-  .field input:focus, .field select:focus, .field textarea:focus { outline: 2px solid var(--blue); border-color: transparent; }
+  .field input, .field select, .field textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: .45rem .65rem;
+    color: var(--text); font-size: .83rem;
+    font-family: inherit;
+    transition: border-color .12s, box-shadow .12s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(124,58,237,.12);
+    background: var(--surface);
+  }
   .field textarea { font-family: inherit; resize: vertical; min-height: 70px; }
 
   /* ── Difficulty stars ── */
-  .stars { display: flex; gap: .3rem; margin-top: .35rem; }
-  .star-btn { font-size: 1.2rem; cursor: pointer; opacity: .3; transition: opacity .1s; background: none; border: none; padding: 0; }
+  .stars { display: flex; gap: .25rem; margin-top: .35rem; }
+  .star-btn {
+    font-size: 1.15rem; cursor: pointer; opacity: .25;
+    transition: opacity .1s, transform .1s;
+    background: none; border: none; padding: 0;
+  }
+  .star-btn:hover { transform: scale(1.15); }
   .star-btn.on { opacity: 1; }
 
   /* ── Output box ── */
-  .json-out { background: #0d1117; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .7rem; font-family: monospace; font-size: .7rem; color: #79c0ff; max-height: 180px; overflow: auto; white-space: pre-wrap; margin-top: .5rem; }
+  .json-out {
+    background: #1e1b2e;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: .8rem;
+    font-family: 'DM Mono', monospace;
+    font-size: .7rem; color: #c4b5fd;
+    max-height: 180px; overflow: auto;
+    white-space: pre-wrap; margin-top: .5rem;
+  }
 
   /* ── Toast ── */
   #toast {
     position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 999;
-    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: .7rem 1.2rem; font-size: .85rem; max-width: 340px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: .7rem 1.2rem; font-size: .83rem; max-width: 340px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.1), 0 1px 3px rgba(0,0,0,.06);
     transform: translateY(100px); opacity: 0; transition: all .3s;
     display: flex; align-items: center; gap: .6rem;
+    font-weight: 500;
   }
   #toast.show { transform: translateY(0); opacity: 1; }
-  #toast.ok { border-color: var(--green); color: #3fb950; }
-  #toast.err { border-color: var(--red); color: #f85149; }
+  #toast.ok  { border-color: var(--green); color: var(--green); }
+  #toast.err { border-color: var(--red);   color: var(--red); }
 
   /* ── Divider ── */
-  .divider { border: none; border-top: 1px solid var(--border); margin: .8rem 0; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: .85rem 0; }
 
   /* ── Help badge ── */
-  .badge { display: inline-block; font-size: .7rem; background: var(--surface3); color: var(--muted); border-radius: 10px; padding: .1rem .4rem; margin-left: .3rem; }
+  .badge {
+    display: inline-block; font-size: .67rem;
+    background: var(--surface3); color: var(--muted);
+    border-radius: 999px; padding: .1rem .45rem;
+    margin-left: .3rem; font-weight: 500;
+  }
 
   /* ── Step indicator ── */
-  .steps { display: flex; gap: .4rem; align-items: center; margin-bottom: .5rem; }
-  .step { display: flex; align-items: center; gap: .4rem; font-size: .8rem; color: var(--muted); }
-  .step-dot { width: 1.3rem; height: 1.3rem; border-radius: 50%; background: var(--surface3); display: flex; align-items: center; justify-content: center; font-size: .65rem; font-weight: 700; }
-  .step.done .step-dot { background: var(--green); color: #fff; }
-  .step.active .step-dot { background: var(--accent); color: #fff; }
-  .step-line { flex: 1; height: 1px; background: var(--border); }
+  .steps { display: flex; gap: .4rem; align-items: center; margin-bottom: .5rem; width: 100%; }
+  .step  { display: flex; align-items: center; gap: .4rem; font-size: .78rem; color: var(--muted); font-weight: 500; }
+  .step-dot {
+    width: 1.4rem; height: 1.4rem; border-radius: 50%;
+    background: var(--surface3); border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .65rem; font-weight: 700; flex-shrink: 0;
+  }
+  .step.done .step-dot   { background: var(--green);  color: #fff; border-color: var(--green); }
+  .step.active .step-dot { background: var(--brand);  color: #fff; border-color: var(--brand); }
+  .step.active           { color: var(--brand-text); }
+  .step.done             { color: var(--green); }
+  .step-line { flex: 1; height: 1.5px; background: var(--border); }
 
   /* ── Warp pair badges ── */
   .warp-list { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .35rem; }
-  .warp-badge { font-size: .72rem; background: var(--purple); color: #fff; border-radius: 4px; padding: .15rem .5rem; }
+  .warp-badge {
+    font-size: .72rem; background: var(--purple-bg);
+    color: var(--brand-text); border-radius: .4rem;
+    padding: .2rem .55rem; font-weight: 600;
+    border: 1px solid rgba(124,58,237,.2);
+  }
 
-  select option { background: var(--surface2); }
+  /* ── Grid info card ── */
+  .info-row {
+    display: flex; justify-content: space-between;
+    font-size: .8rem; padding: .25rem 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-row strong { color: var(--text); font-weight: 600; }
+
+  /* ── Tips card ── */
+  .tips-card {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    padding: .65rem .75rem;
+    font-size: .77rem;
+    color: var(--muted);
+    line-height: 1.75;
+    margin-top: .4rem;
+  }
+  .tips-card strong { color: var(--text); font-weight: 600; }
+
+  select option { background: var(--surface); }
+
+  /* ── Dark mode toggle ── */
+  .theme-toggle {
+    width: 2.2rem; height: 2.2rem;
+    border-radius: 0.6rem;
+    background: rgba(255,255,255,0.15);
+    border: none; cursor: pointer;
+    display: grid; place-items: center;
+    font-size: 1rem; transition: background .15s;
+    flex-shrink: 0;
+  }
+  .theme-toggle:hover { background: rgba(255,255,255,0.25); }
+
+  /* ── Size select ── */
+  .size-select {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: .38rem .65rem;
+    color: var(--text); font-size: .83rem;
+    font-family: inherit; font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    transition: border-color .12s, box-shadow .12s;
+  }
+  .size-select:focus {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(124,58,237,.12);
+  }
 </style>
 </head>
 <body>
 
 <header>
-  <div>
-    <h1>⭐ Pathfinder Puzzle Builder</h1>
+  <div class="header-logo">PF</div>
+  <div style="flex:1">
+    <h1>Pathfinder Puzzle Builder</h1>
   </div>
-  <p>Build your puzzle, then export it as JSON to send in!</p>
+  <p>Build your puzzle · export as JSON</p>
+  <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle dark mode">🌙</button>
 </header>
 
 <div class="layout">
@@ -157,9 +414,9 @@
     <div id="palette"></div>
     <hr class="divider">
     <h2>Warp Pair</h2>
-    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem">Select Warp, click one cell then another to link them. Max 1 pair per puzzle.</p>
+    <p style="font-size:.76rem;color:var(--muted);margin-bottom:.5rem;line-height:1.5">Select Warp, click one cell then another to link them. Max 1 pair per puzzle.</p>
     <div class="warp-list" id="warpList"><span style="font-size:.75rem;color:var(--muted)">No warp pair yet</span></div>
-    <button class="btn btn-ghost" style="margin-top:.6rem;font-size:.75rem" onclick="clearWarps()">Remove warp pair</button>
+    <button class="btn btn-ghost" style="margin-top:.7rem;font-size:.75rem" onclick="clearWarps()">Remove warp pair</button>
   </div>
 
   <!-- CENTER: Grid -->
@@ -177,10 +434,19 @@
 
     <div class="toolbar">
       <label>Grid size:</label>
-      <input type="number" id="gridW" value="8" min="4" max="14" title="Width">
-      <span style="color:var(--muted);font-size:.85rem">×</span>
-      <input type="number" id="gridH" value="8" min="4" max="14" title="Height">
-      <button class="btn btn-ghost" onclick="resizeGrid()">Resize</button>
+      <select class="size-select" id="gridSize" onchange="resizeGrid()">
+        <option value="4">4 × 4</option>
+        <option value="5">5 × 5</option>
+        <option value="6">6 × 6</option>
+        <option value="7">7 × 7</option>
+        <option value="8">8 × 8</option>
+        <option value="9">9 × 9</option>
+        <option value="10" selected>10 × 10</option>
+        <option value="11">11 × 11</option>
+        <option value="12">12 × 12</option>
+        <option value="13">13 × 13</option>
+        <option value="14">14 × 14</option>
+      </select>
       <button class="btn btn-ghost" onclick="clearGrid()">Clear grid</button>
       <button class="btn btn-ghost" onclick="fillWalls()">Fill walls</button>
     </div>
@@ -192,7 +458,7 @@
     <div class="toolbar" style="justify-content:center;gap:.7rem;flex-wrap:wrap">
       <button class="btn btn-ghost" onclick="undo()">↩ Undo</button>
       <button class="btn btn-green" onclick="generateJSON()">🔍 Preview JSON</button>
-      <button class="btn btn-accent" onclick="exportJSON()">⬇️ Download JSON</button>
+      <button class="btn btn-accent" onclick="exportJSON()">⬇ Download JSON</button>
       <button class="btn btn-blue" onclick="copyJSON()">📋 Copy JSON</button>
     </div>
 
@@ -225,7 +491,7 @@
         <button class="star-btn" data-v="4" onclick="setDiff(4)">⭐</button>
         <button class="star-btn" data-v="5" onclick="setDiff(5)">⭐</button>
       </div>
-      <p style="font-size:.75rem;color:var(--muted);margin-top:.4rem">1 = super easy · 5 = devious</p>
+      <p style="font-size:.74rem;color:var(--muted);margin-top:.4rem">1 = super easy · 5 = devious</p>
     </div>
 
     <div class="field">
@@ -236,24 +502,24 @@
     <hr class="divider">
     <h2>Grid info</h2>
 
-    <div style="font-size:.82rem;color:var(--muted);line-height:1.8">
-      <div>Size: <strong id="infoSize">8 × 8</strong></div>
-      <div>Start: <strong id="infoStart">Not placed</strong></div>
-      <div>Goal: <strong id="infoGoal">Not placed</strong></div>
-      <div>Warp pairs: <strong id="infoWarps">0</strong></div>
+    <div style="margin-top:.1rem">
+      <div class="info-row"><span>Size</span><strong id="infoSize">8 × 8</strong></div>
+      <div class="info-row"><span>Start</span><strong id="infoStart">Not placed</strong></div>
+      <div class="info-row"><span>Goal</span><strong id="infoGoal">Not placed</strong></div>
+      <div class="info-row"><span>Warp pairs</span><strong id="infoWarps">0</strong></div>
     </div>
 
     <hr class="divider">
     <h2>Tips</h2>
-    <div style="font-size:.78rem;color:var(--muted);line-height:1.7">
-      <p>🟩 <strong style="color:var(--text)">Start</strong> — where the player begins</p>
-      <p>⭐ <strong style="color:var(--text)">Goal</strong> — what they're trying to reach</p>
-      <p>🟦 <strong style="color:var(--text)">Ice</strong> — player slides until hitting a wall</p>
-      <p>🔄 <strong style="color:var(--text)">Rotate R/L</strong> — rotates next input 90°</p>
-      <p>🟧 <strong style="color:var(--text)">One-use</strong> — disappears after stepping on it</p>
-      <p>🟪 <strong style="color:var(--text)">Warp</strong> — teleports to its paired tile</p>
-      <p>🟨 <strong style="color:var(--text)">Boost</strong> — moves two steps instead of one</p>
-      <p style="margin-top:.5rem">💡 Hotkeys: <strong style="color:var(--text)">E W S G I R L U T B</strong></p>
+    <div class="tips-card">
+      <p>🟩 <strong>Start</strong> — where the player begins</p>
+      <p>⭐ <strong>Goal</strong> — what they're trying to reach</p>
+      <p>🟦 <strong>Ice</strong> — player slides until hitting a wall</p>
+      <p>🔄 <strong>Rotate R/L</strong> — rotates next input 90°</p>
+      <p>🟧 <strong>One-use</strong> — disappears after stepping on it</p>
+      <p>🟪 <strong>Warp</strong> — teleports to its paired tile</p>
+      <p>🟨 <strong>Boost</strong> — moves two steps instead of one</p>
+      <p style="margin-top:.4rem">💡 Hotkeys: <strong>E W S G I R L U T B</strong></p>
     </div>
   </div>
 
@@ -277,14 +543,14 @@ const TILES = {
 };
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let W = 8, H = 8;
-let grid = [];           // 2D array of tile keys
-let startPos = null;     // {row,col}
+let W = 10, H = 10;
+let grid = [];
+let startPos = null;
 let goalPos  = null;
 let selected = 'empty';
-let history  = [];       // undo stack
-let warpPending = null;  // first warp cell waiting for its pair
-let warpPairs  = [];     // [{a:{row,col}, b:{row,col}}]
+let history  = [];
+let warpPending = null;
+let warpPairs  = [];
 let difficulty = 0;
 let isMouseDown = false;
 
@@ -325,7 +591,7 @@ function updateModeTip() {
   let tip = `<strong>Mode:</strong> Paint ${t.name} <span style="font-size:1.1rem">${t.emoji}</span>`;
   if (selected === 'warp') {
     tip += warpPending
-      ? ' — <span style="color:#a371f7">now click the second tile to link it</span>'
+      ? ' — <span style="color:var(--brand)">now click the second tile to link it</span>'
       : warpPairs.length
         ? ' — pair exists, click any cell to replace it'
         : ' — click the first tile';
@@ -350,9 +616,9 @@ function renderGrid() {
       cell.textContent = TILES[grid[r][c]]?.emoji ?? '⬜';
       if (startPos && startPos.row === r && startPos.col === c) cell.classList.add('start-cell');
       if (goalPos  && goalPos.row  === r && goalPos.col  === c) cell.classList.add('goal-cell');
-      // warp pending highlight
       if (warpPending && warpPending.row === r && warpPending.col === c) {
-        cell.style.boxShadow = '0 0 0 2px #a371f7';
+        cell.style.boxShadow = '0 0 0 2px var(--brand)';
+        cell.style.borderColor = 'var(--brand)';
       }
       cell.addEventListener('mousedown', e => { isMouseDown = true; paintCell(r, c); e.preventDefault(); });
       cell.addEventListener('mouseenter', () => { if (isMouseDown && selected !== 'warp' && selected !== 'start' && selected !== 'goal') paintCell(r, c); });
@@ -381,20 +647,16 @@ function paintCell(r, c) {
     renderGrid(); updateInfo(); updateSteps(); return;
   }
 
-  // Warp pairing logic — max 1 pair (2 tiles)
   if (selected === 'warp') {
-    // If this cell already has warp, clicking it again cancels/removes it
     if (grid[r][c] === 'warp') {
-      // Remove from pairs and pending
       warpPairs = warpPairs.filter(p => !(cellEq(p.a, {row:r,col:c}) || cellEq(p.b, {row:r,col:c})));
       if (warpPending && cellEq(warpPending, {row:r,col:c})) warpPending = null;
       grid[r][c] = 'empty';
       renderGrid(); renderWarpList(); updateInfo(); updateModeTip(); return;
     }
     if (warpPending) {
-      // Complete the pair
       const a = warpPending, b = {row: r, col: c};
-      warpPairs = [{a, b}]; // enforce single pair
+      warpPairs = [{a, b}];
       grid[a.row][a.col] = 'warp';
       grid[b.row][b.col] = 'warp';
       warpPending = null;
@@ -402,7 +664,6 @@ function paintCell(r, c) {
       toast('Warp pair linked! 🟪↔🟪', 'ok');
       return;
     } else {
-      // If a pair already exists, clear it first
       if (warpPairs.length) {
         warpPairs.forEach(p => {
           grid[p.a.row][p.a.col] = 'empty';
@@ -418,10 +679,8 @@ function paintCell(r, c) {
     }
   }
 
-  // Clear start/goal if painting over them
   if (startPos && startPos.row === r && startPos.col === c) startPos = null;
   if (goalPos  && goalPos.row  === r && goalPos.col  === c) goalPos  = null;
-  // Clear warp pair if painting over a warp cell
   if (grid[r][c] === 'warp') {
     warpPairs = warpPairs.filter(p => !(cellEq(p.a, {row:r,col:c}) || cellEq(p.b, {row:r,col:c})));
     if (warpPending && cellEq(warpPending, {row:r,col:c})) warpPending = null;
@@ -433,9 +692,7 @@ function paintCell(r, c) {
   renderGrid(); updateInfo(); updateSteps();
 }
 
-function syncSpecialPos() {
-  // Ensure startPos/goalPos track correctly if overwritten by non-start/goal tile
-}
+function syncSpecialPos() {}
 
 function cellEq(a, b) { return a && b && a.row === b.row && a.col === b.col; }
 
@@ -443,7 +700,7 @@ function cellEq(a, b) { return a && b && a.row === b.row && a.col === b.col; }
 function renderWarpList() {
   const el = document.getElementById('warpList');
   if (warpPending && !warpPairs.length) {
-    el.innerHTML = '<span style="font-size:.75rem;color:#a371f7">🟪 First tile placed — click a second cell to link</span>';
+    el.innerHTML = '<span style="font-size:.75rem;color:var(--brand)">🟪 First tile placed — click a second cell to link</span>';
   } else if (warpPairs.length) {
     const p = warpPairs[0];
     el.innerHTML = `<span class="warp-badge">🟪 (${p.a.row},${p.a.col}) ↔ (${p.b.row},${p.b.col})</span>`;
@@ -486,16 +743,13 @@ function undo() {
 
 // ── Grid ops ──────────────────────────────────────────────────────────────────
 function resizeGrid() {
-  const nw = parseInt(document.getElementById('gridW').value);
-  const nh = parseInt(document.getElementById('gridH').value);
-  if (nw < 4 || nw > 14 || nh < 4 || nh > 14) { toast('Size must be between 4 and 14', 'err'); return; }
+  const n = parseInt(document.getElementById('gridSize').value);
   pushHistory();
-  const ng = Array.from({length: nh}, (_, r) => Array.from({length: nw}, (_, c) => (r < H && c < W) ? grid[r][c] : 'empty'));
-  W = nw; H = nh; grid = ng;
+  const ng = Array.from({length: n}, (_, r) => Array.from({length: n}, (_, c) => (r < H && c < W) ? grid[r][c] : 'empty'));
+  W = n; H = n; grid = ng;
   if (startPos && (startPos.row >= H || startPos.col >= W)) startPos = null;
   if (goalPos  && (goalPos.row  >= H || goalPos.col  >= W)) goalPos  = null;
   warpPairs = warpPairs.filter(p => p.a.row < H && p.a.col < W && p.b.row < H && p.b.col < W);
-  document.getElementById('infoSize').textContent = `${W} × ${H}`;
   renderGrid(); renderWarpList(); updateInfo(); updateSteps();
 }
 
@@ -555,33 +809,23 @@ function buildPuzzle() {
   const creator = document.getElementById('creatorName').value.trim();
   const title   = document.getElementById('puzzleTitle').value.trim();
   const notes   = document.getElementById('notes').value.trim();
-
-  // Convert {row,col} -> [row,col] and [{a,b}] -> [[[r,c],[r,c]]] to match server format
   const startArr = startPos ? [startPos.row, startPos.col] : null;
   const goalArr  = goalPos  ? [goalPos.row,  goalPos.col]  : null;
   const warpsArr = warpPairs.map(p => [[p.a.row, p.a.col], [p.b.row, p.b.col]]);
-
   const puzzle = {
-    grid,
-    startPos: startArr,
-    goalPos:  goalArr,
-    warpPairs: warpsArr,
-    size: Math.max(W, H),
-    difficulty: difficulty || undefined,
-    creatorName: creator || undefined,
-    title: title || undefined,
-    notes: notes || undefined,
-    builtWith: 'Pathfinder Puzzle Builder',
+    grid, startPos: startArr, goalPos: goalArr, warpPairs: warpsArr,
+    size: Math.max(W, H), difficulty: difficulty || undefined,
+    creatorName: creator || undefined, title: title || undefined,
+    notes: notes || undefined, builtWith: 'Pathfinder Puzzle Builder',
     createdAt: new Date().toISOString(),
   };
-  // Clean up undefined keys
   return JSON.parse(JSON.stringify(puzzle));
 }
 
 function validate() {
   if (!startPos) { toast('Please place a Start tile first (🟩)', 'err'); return false; }
   if (!goalPos)  { toast('Please place a Goal tile first (⭐)', 'err');  return false; }
-  if (warpPending) { toast('You placed one warp tile but never linked it to a second — link or remove it first.', 'err'); return false; }
+  if (warpPending) { toast('You placed one warp tile but never linked it — link or remove it first.', 'err'); return false; }
   return true;
 }
 
@@ -619,6 +863,18 @@ function toast(msg, type = 'ok') {
   el.className = 'show ' + type;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+// ── Dark mode ─────────────────────────────────────────────────────────────────
+function toggleTheme() {
+  const isDark = document.documentElement.classList.toggle('dark');
+  document.getElementById('themeBtn').textContent = isDark ? '☀️' : '🌙';
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+}
+// Restore saved theme
+if (localStorage.getItem('theme') === 'dark') {
+  document.documentElement.classList.add('dark');
+  document.getElementById('themeBtn').textContent = '☀️';
 }
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
