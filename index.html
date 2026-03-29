@@ -156,10 +156,10 @@
     <h2>Tile Palette</h2>
     <div id="palette"></div>
     <hr class="divider">
-    <h2>Warp Pairs <span class="badge">click pairs</span></h2>
-    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem">Select Warp tile mode, then click two cells to link them as a pair.</p>
-    <div class="warp-list" id="warpList"><span style="font-size:.75rem;color:var(--muted)">None yet</span></div>
-    <button class="btn btn-ghost" style="margin-top:.6rem;font-size:.75rem" onclick="clearWarps()">Clear all warps</button>
+    <h2>Warp Pair</h2>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem">Select Warp, click one cell then another to link them. Max 1 pair per puzzle.</p>
+    <div class="warp-list" id="warpList"><span style="font-size:.75rem;color:var(--muted)">No warp pair yet</span></div>
+    <button class="btn btn-ghost" style="margin-top:.6rem;font-size:.75rem" onclick="clearWarps()">Remove warp pair</button>
   </div>
 
   <!-- CENTER: Grid -->
@@ -324,7 +324,11 @@ function updateModeTip() {
   const t = TILES[selected];
   let tip = `<strong>Mode:</strong> Paint ${t.name} <span style="font-size:1.1rem">${t.emoji}</span>`;
   if (selected === 'warp') {
-    tip += warpPending ? ' — <span style="color:#a371f7">click the second warp cell</span>' : ' — click two cells to link them';
+    tip += warpPending
+      ? ' — <span style="color:#a371f7">now click the second tile to link it</span>'
+      : warpPairs.length
+        ? ' — pair exists, click any cell to replace it'
+        : ' — click the first tile';
   }
   if (selected === 'start') tip += ' — click to place (only one allowed)';
   if (selected === 'goal')  tip += ' — click to place (only one allowed)';
@@ -351,7 +355,7 @@ function renderGrid() {
         cell.style.boxShadow = '0 0 0 2px #a371f7';
       }
       cell.addEventListener('mousedown', e => { isMouseDown = true; paintCell(r, c); e.preventDefault(); });
-      cell.addEventListener('mouseenter', () => { if (isMouseDown) paintCell(r, c); });
+      cell.addEventListener('mouseenter', () => { if (isMouseDown && selected !== 'warp' && selected !== 'start' && selected !== 'goal') paintCell(r, c); });
       row.appendChild(cell);
     }
     wrap.appendChild(row);
@@ -377,22 +381,40 @@ function paintCell(r, c) {
     renderGrid(); updateInfo(); updateSteps(); return;
   }
 
-  // Warp pairing logic
+  // Warp pairing logic — max 1 pair (2 tiles)
   if (selected === 'warp') {
+    // If this cell already has warp, clicking it again cancels/removes it
+    if (grid[r][c] === 'warp') {
+      // Remove from pairs and pending
+      warpPairs = warpPairs.filter(p => !(cellEq(p.a, {row:r,col:c}) || cellEq(p.b, {row:r,col:c})));
+      if (warpPending && cellEq(warpPending, {row:r,col:c})) warpPending = null;
+      grid[r][c] = 'empty';
+      renderGrid(); renderWarpList(); updateInfo(); updateModeTip(); return;
+    }
     if (warpPending) {
+      // Complete the pair
       const a = warpPending, b = {row: r, col: c};
-      if (a.row === b.row && a.col === b.col) { warpPending = null; renderGrid(); return; }
-      // Remove any existing warp pair that contains these cells
-      warpPairs = warpPairs.filter(p => !(cellEq(p.a, a) || cellEq(p.b, a) || cellEq(p.a, b) || cellEq(p.b, b)));
-      warpPairs.push({a, b});
+      warpPairs = [{a, b}]; // enforce single pair
       grid[a.row][a.col] = 'warp';
       grid[b.row][b.col] = 'warp';
       warpPending = null;
-      renderGrid(); renderWarpList(); updateInfo(); updateModeTip(); return;
+      renderGrid(); renderWarpList(); updateInfo(); updateModeTip();
+      toast('Warp pair linked! 🟪↔🟪', 'ok');
+      return;
     } else {
+      // If a pair already exists, clear it first
+      if (warpPairs.length) {
+        warpPairs.forEach(p => {
+          grid[p.a.row][p.a.col] = 'empty';
+          grid[p.b.row][p.b.col] = 'empty';
+        });
+        warpPairs = [];
+      }
       grid[r][c] = 'warp';
       warpPending = {row: r, col: c};
-      renderGrid(); updateModeTip(); return;
+      renderGrid(); renderWarpList(); updateInfo(); updateModeTip();
+      toast('Warp tile placed — click a second tile to link it', 'ok');
+      return;
     }
   }
 
@@ -420,19 +442,26 @@ function cellEq(a, b) { return a && b && a.row === b.row && a.col === b.col; }
 // ── Warp list ─────────────────────────────────────────────────────────────────
 function renderWarpList() {
   const el = document.getElementById('warpList');
-  if (!warpPairs.length) { el.innerHTML = '<span style="font-size:.75rem;color:var(--muted)">None yet</span>'; return; }
-  el.innerHTML = warpPairs.map((p, i) =>
-    `<span class="warp-badge" title="Pair ${i+1}: (${p.a.row},${p.a.col}) ↔ (${p.b.row},${p.b.col})">Pair ${i+1}</span>`
-  ).join('');
+  if (warpPending && !warpPairs.length) {
+    el.innerHTML = '<span style="font-size:.75rem;color:#a371f7">🟪 First tile placed — click a second cell to link</span>';
+  } else if (warpPairs.length) {
+    const p = warpPairs[0];
+    el.innerHTML = `<span class="warp-badge">🟪 (${p.a.row},${p.a.col}) ↔ (${p.b.row},${p.b.col})</span>`;
+  } else {
+    el.innerHTML = '<span style="font-size:.75rem;color:var(--muted)">No warp pair yet</span>';
+  }
 }
 
 function clearWarps() {
+  if (!warpPairs.length && !warpPending) { toast('No warp pair to remove', 'err'); return; }
   warpPairs.forEach(p => {
     grid[p.a.row][p.a.col] = 'empty';
     grid[p.b.row][p.b.col] = 'empty';
   });
+  if (warpPending) { grid[warpPending.row][warpPending.col] = 'empty'; }
   warpPairs = []; warpPending = null;
   renderGrid(); renderWarpList(); updateInfo();
+  toast('Warp pair removed', 'ok');
 }
 
 // ── Undo ──────────────────────────────────────────────────────────────────────
@@ -499,7 +528,7 @@ function updateInfo() {
   document.getElementById('infoSize').textContent  = `${W} × ${H}`;
   document.getElementById('infoStart').textContent = startPos ? `row ${startPos.row}, col ${startPos.col}` : 'Not placed';
   document.getElementById('infoGoal').textContent  = goalPos  ? `row ${goalPos.row}, col ${goalPos.col}`   : 'Not placed';
-  document.getElementById('infoWarps').textContent = warpPairs.length;
+  document.getElementById('infoWarps').textContent = warpPairs.length ? 'Linked ✓' : warpPending ? 'Waiting for 2nd…' : 'None';
 }
 
 // ── Steps ─────────────────────────────────────────────────────────────────────
@@ -546,14 +575,7 @@ function buildPuzzle() {
 function validate() {
   if (!startPos) { toast('Please place a Start tile first (🟩)', 'err'); return false; }
   if (!goalPos)  { toast('Please place a Goal tile first (⭐)', 'err');  return false; }
-  // Check warp pairs are complete
-  const warpCells = [];
-  for (let r = 0; r < H; r++)
-    for (let c = 0; c < W; c++)
-      if (grid[r][c] === 'warp') warpCells.push({row:r,col:c});
-  const paired = warpPairs.flatMap(p => [p.a, p.b]);
-  const unpaired = warpCells.filter(w => !paired.some(p => cellEq(p, w)));
-  if (unpaired.length) { toast(`${unpaired.length} warp tile(s) are unpaired! Link them or remove them.`, 'err'); return false; }
+  if (warpPending) { toast('You placed one warp tile but never linked it to a second — link or remove it first.', 'err'); return false; }
   return true;
 }
 
